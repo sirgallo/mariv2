@@ -45,13 +45,13 @@ func main() {
   homedir, homedirErr := os.UserHomeDir()
   if homedirErr != nil { panic(homedirErr.Error()) }
   
-  opts := mari.MariOpts{ Filepath: homedir, FileName: FILENAME }
+  opts := mariv2.MariOpts{ Filepath: homedir, FileName: FILENAME }
 
-  mariInst, openErr := mari.Open(opts)
+  mariInst, openErr := mariv2.Open(opts)
   if openErr != nil { panic(openErr.Error()) }
   defer mariInst.Close()
 
-  putErr := mariInst.UpdateTx(func(tx *mari.MariTx) error {
+  putErr := mariInst.UpdateTx(func(tx *mariv2.MariTx) error {
     putTxErr := tx.Put([]byte("hello"), []byte("world"))
     if putTxErr != nil { return putTxErr }
 
@@ -60,8 +60,8 @@ func main() {
 
   if putErr != nil { panic(putErr.Error()) }
 
-  var kvPair *mari.KeyValuePair
-  getErr := mariInst.ReadTx(func(tx *mari.MariTx) error {
+  var kvPair *mariv2.KeyValuePair
+  getErr := mariInst.ReadTx(func(tx *mariv2.MariTx) error {
     var getTxErr error
     kvPair, getTxErr = tx.Get([]byte("hello"), nil)
     if getTxErr != nil { return getTxErr }
@@ -119,14 +119,14 @@ The `mmap` function utilizes `golang.org/x/sys/unix`, so the mmap functionality 
 
 ## Sources
 
-[COMap](./docs/COMap.md)
+[comap](./docs/comap.md)
 
-[Compaction](./docs/Compaction.md)
+[compaction](./docs/compaction.md)
 
-[Concepts](./docs/Concepts.md)
+[concepts](./docs/concepts.md)
 
-[NodePool](./docs/NodePool.md)
+[pool](./docs/pool.md)
 
-[Tests](./docs/Tests.md)
+[test](./docs/test.md)
 
-[Transactions](./docs/Transactions.md)
+[transactions](./docs/transactions.md)
