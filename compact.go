@@ -119,7 +119,7 @@ func (mariInst *Mari) serializeCurrentVersionToNewFile(compact *MariCompaction, 
 	serializedKeyVal, serializeErr := currNode.leaf.serializeLNode()
 	if serializeErr != nil { return 0, serializeErr }
 
-	nextStartOffset := currNode.leaf.endOffset + 1
+	nextStartOffset := currNode.leaf.getEndOffsetLNode() + 1
 
 	if len(currNode.children) > 0 {
 		var childNode *MariINode
@@ -140,13 +140,13 @@ func (mariInst *Mari) serializeCurrentVersionToNewFile(compact *MariCompaction, 
 		}
 	}
 
-	serializeErr = compact.resizeTempFile(currNode.leaf.endOffset + 1)
+	serializeErr = compact.resizeTempFile(currNode.leaf.getEndOffsetLNode() + 1)
 	if serializeErr != nil { return 0, serializeErr }
 
 	sNode = append(sNode, serializedKeyVal...)
 
 	temp := compact.tempData.Load().(MMap)
-	copy(temp[currNode.startOffset:currNode.leaf.endOffset + 1], sNode)
+	copy(temp[currNode.startOffset:currNode.leaf.getEndOffsetLNode() + 1], sNode)
 	return nextStartOffset, nil
 }
 
@@ -254,7 +254,7 @@ func (compact *MariCompaction) writeMetaToTempMemMap(sMeta []byte) (ok bool, err
 	}()
 
 	temp := compact.tempData.Load().(MMap)
-	copy(temp[MetaVersionIdx:MetaEndSerializedOffset + OffsetSize], sMeta)
+	copy(temp[MetaVersionIdx:MetaEndSerializedOffset + OffsetSize64], sMeta)
 
 	flushErr := compact.tempFile.Sync()
 	if flushErr != nil { return false, flushErr }

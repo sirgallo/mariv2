@@ -42,7 +42,7 @@ type MariINode struct {
 	// StartOffset: the offset from the beginning of the serialized node is located
 	startOffset uint64
 	// EndOffset: the offset from the end of the serialized node is located
-	endOffset uint64
+	endOffset uint16
 	// Bitmap: a 256 bit sparse index that indicates the location of each hashed key within the array of child nodes. Only stored in internal nodes
 	bitmap [8]uint32
 	// LeafOffset: the offset of the leaf node associated with the current byte chunk
@@ -58,9 +58,9 @@ type MariLNode struct {
 	// StartOffset: the offset from the beginning of the serialized node is located
 	startOffset uint64
 	// EndOffset: the offset from the end of the serialized node is located
-	endOffset uint64
+	endOffset uint16
 	// KeyLength: the length of the key in a Leaf Node. Keys can be variable size
-	keyLength uint16
+	keyLength uint8
 	// Key: The key associated with a value. Keys are in byte array representation. Keys are only stored within leaf nodes
 	key []byte
 	// Value: The value associated with a key, in byte array representation. Values are only stored within leaf nodes
@@ -70,7 +70,7 @@ type MariLNode struct {
 // KeyValuePair
 type KeyValuePair struct {
 	// Version: a tag for Copy-on-Write indicating the version of the node
-	Version uint64
+	// Version uint64
 	// Key: The key associated with a value. Keys are in byte array representation. Keys are only stored within leaf nodes
 	Key []byte
 	// Value: The value associated with a key, in byte array representation. Values are only stored within leaf nodes
@@ -173,19 +173,20 @@ const (
 	// Index of EndOffset in serialized node
 	NodeEndOffsetIdx = 16
 	// Index of Bitmap in serialized node
-	NodeBitmapIdx = 24
+	NodeBitmapIdx = 18
 	// Index of IsLeaf in serialized node
-	NodeLeafOffsetIdx = 56
+	NodeLeafOffsetIdx = 50
 	// Index of Children in serialized internal node
-	NodeChildrenIdx = 64
+	NodeChildrenIdx = 58
 	// Index of Key Length in serialized node
-	NodeKeyLength = 24
+	NodeKeyLength = 18
 	// Index of Key in serialized leaf node node
-	NodeKeyIdx = 26
+	NodeKeyIdx = 19
 	// OffsetSize for uint64 in serialized node
-	OffsetSize = 8
+	OffsetSize64 = 8
 	// Bitmap size in bytes since bitmap sis uint32
-	BitmapSize = 4
+	OffsetSize32 = 4
+	OffsetSize16 = 2
 	// Size of child pointers, where the pointers are uint64 offsets in the memory map
 	NodeChildPtrSize = 8
 	// Offset for the first version of root on Mari initialization

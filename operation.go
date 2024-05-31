@@ -154,7 +154,7 @@ func (mariInst *Mari) getRecursive(node *unsafe.Pointer, key []byte, level int, 
 	
 	getKeyVal := func() *KeyValuePair {
 		return &KeyValuePair{
-			Version: currNode.leaf.version,
+			// Version: currNode.leaf.version,
 			Key: currNode.leaf.key,
 			Value: currNode.leaf.value,
 		}

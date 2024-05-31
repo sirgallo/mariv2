@@ -20,7 +20,7 @@ func (mariInst *Mari) rangeRecursive(
 ) ([]*KeyValuePair, error) {
 	genKeyValPair := func(node *MariINode) *KeyValuePair {
 		kvPair := &KeyValuePair {
-			Version: node.leaf.version,
+			// Version: node.leaf.version,
 			Key: node.leaf.key,
 			Value: node.leaf.value,
 		}

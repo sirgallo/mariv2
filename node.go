@@ -30,9 +30,8 @@ func (mariInst *Mari) copyINode(node *MariINode) *MariINode {
 // determineEndOffsetINode
 //	Determine the end offset of a serialized MariINode.
 //	This will be the start offset through the children index, plus (number of children * 8 bytes).
-func (node *MariINode) determineEndOffsetINode() uint64 {
-	nodeEndOffset := node.startOffset
-
+func (node *MariINode) determineEndOffsetINode() uint16 {
+	nodeEndOffset := uint16(0)
 	encodedChildrenLength := func() int {
 		var totalChildren int 
 		for _, subBitmap := range node.bitmap {
@@ -43,7 +42,7 @@ func (node *MariINode) determineEndOffsetINode() uint64 {
 	}()
 
 	if encodedChildrenLength != 0 {
-		nodeEndOffset += uint64(NodeChildrenIdx + encodedChildrenLength)
+		nodeEndOffset += uint16(NodeChildrenIdx + encodedChildrenLength)
 	} else { nodeEndOffset += NodeChildrenIdx }
 
 	return nodeEndOffset - 1
@@ -52,13 +51,21 @@ func (node *MariINode) determineEndOffsetINode() uint64 {
 // determineEndOffsetLNode
 //	Determine the end offset of a serialized MariLNode.
 //	This will be the start offset through the key index, plus the length of the key and the length of the value.
-func (node *MariLNode) determineEndOffsetLNode() uint64 {
-	nodeEndOffset := node.startOffset
+func (node *MariLNode) determineEndOffsetLNode() uint16 {
+	nodeEndOffset := uint16(0)
 	if node.key != nil {
-		nodeEndOffset += uint64(NodeKeyIdx + int(node.keyLength) + len(node.value))
-	} else { nodeEndOffset += uint64(NodeKeyIdx) }
+		nodeEndOffset += uint16(NodeKeyIdx + int(node.keyLength) + len(node.value))
+	} else { nodeEndOffset += NodeKeyIdx }
 	
 	return nodeEndOffset - 1
+}
+
+func (node *MariINode) getEndOffsetINode() uint64 {
+	return node.startOffset + uint64(node.endOffset)
+}
+
+func (node *MariLNode) getEndOffsetLNode() uint64 {
+	return node.startOffset + uint64(node.endOffset)
 }
 
 // getChildNode
@@ -116,7 +123,7 @@ func (mariInst *Mari) newInternalNode(version uint64) *MariINode {
 func (mariInst *Mari) newLeafNode(key, value []byte, version uint64) *MariLNode {
 	lNode := mariInst.nodePool.getLNode()
 	lNode.version = version
-	lNode.keyLength = uint16(len(key))
+	lNode.keyLength = uint8(len(key))
 	lNode.key = key
 	lNode.value = value
 
@@ -138,12 +145,12 @@ func (mariInst *Mari) readINodeFromMemMap(startOffset uint64) (node *MariINode, 
 	endOffsetIdx := startOffset + NodeEndOffsetIdx
 	
 	mMap := mariInst.data.Load().(MMap)
-	sEndOffset := mMap[endOffsetIdx:endOffsetIdx + OffsetSize]
+	sEndOffset := mMap[endOffsetIdx:endOffsetIdx + OffsetSize16]
 
-	endOffset, readErr := deserializeUint64(sEndOffset)
+	endOffset, readErr := deserializeUint16(sEndOffset)
 	if readErr != nil { return nil, readErr }
 
-	sNode := mMap[startOffset:endOffset + 1]
+	sNode := mMap[startOffset:startOffset + uint64(endOffset) + 1]
 	node, readErr = deserializeINode(sNode)
 	if readErr != nil { return nil, readErr }
 
@@ -168,12 +175,12 @@ func (mariInst *Mari) readLNodeFromMemMap(startOffset uint64) (node *MariLNode, 
 	var readErr error 
 	endOffsetIdx := startOffset + NodeEndOffsetIdx
 	mMap := mariInst.data.Load().(MMap)
-	sEndOffset := mMap[endOffsetIdx:endOffsetIdx + OffsetSize]
+	sEndOffset := mMap[endOffsetIdx:endOffsetIdx + OffsetSize16]
 
-	endOffset, readErr := deserializeUint64(sEndOffset)
+	endOffset, readErr := deserializeUint16(sEndOffset)
 	if readErr != nil { return nil, readErr }
 
-	sNode := mMap[startOffset:endOffset + 1]
+	sNode := mMap[startOffset:startOffset + uint64(endOffset) + 1]
 	node, readErr = deserializeLNode(sNode)
 	if readErr != nil { return nil, readErr }
 	return node, nil
@@ -202,11 +209,11 @@ func (mariInst *Mari) writeINodeToMemMap(node *MariINode) (offset uint64, err er
 	if writeErr != nil { return 0, writeErr	}
 
 	mMap := mariInst.data.Load().(MMap)
-	copy(mMap[node.startOffset:node.leaf.startOffset], sNode)
+	copy(mMap[node.startOffset:node.leaf.startOffset + 1], sNode)
 
-	writeErr = mariInst.flushRegionToDisk(node.startOffset, node.endOffset)
+	writeErr = mariInst.flushRegionToDisk(node.startOffset, node.getEndOffsetINode())
 	if writeErr != nil { return 0, writeErr } 
-	
+
 	lEndOffset, writeErr := mariInst.writeLNodeToMemMap(node.leaf)
 	if writeErr != nil { return 0, writeErr }
 	return lEndOffset, nil
@@ -227,7 +234,7 @@ func (mariInst *Mari) writeLNodeToMemMap(node *MariLNode) (offset uint64, err er
 	sNode, writeErr := node.serializeLNode()
 	if writeErr != nil { return 0, writeErr	}
 
-	endOffset := node.determineEndOffsetLNode()
+	endOffset := node.getEndOffsetLNode()
 	mMap := mariInst.data.Load().(MMap)
 	copy(mMap[node.startOffset:endOffset + 1], sNode)
 

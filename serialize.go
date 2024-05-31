@@ -12,13 +12,13 @@ import (
 // serializeMetaData
 //	Serialize the metadata at the first 0-23 bytes of the memory map. version is 8 bytes and Root Offset is 8 bytes.
 func (meta *MariMetaData) serializeMetaData() []byte {
-	versionBytes := make([]byte, OffsetSize)
+	versionBytes := make([]byte, OffsetSize64)
 	binary.LittleEndian.PutUint64(versionBytes, meta.version)
 
-	rootOffsetBytes := make([]byte, OffsetSize)
+	rootOffsetBytes := make([]byte, OffsetSize64)
 	binary.LittleEndian.PutUint64(rootOffsetBytes, meta.rootOffset)
 
-	nextStartOffsetBytes := make([]byte, OffsetSize)
+	nextStartOffsetBytes := make([]byte, OffsetSize64)
 	binary.LittleEndian.PutUint64(nextStartOffsetBytes, meta.nextStartOffset)
 
 	offsets := append(rootOffsetBytes, nextStartOffsetBytes...)
@@ -36,7 +36,7 @@ func deserializeINode(snode []byte) (*MariINode, error) {
 	startOffset, deserializeErr := deserializeUint64(snode[NodeStartOffsetIdx:NodeEndOffsetIdx])
 	if deserializeErr != nil { return nil, deserializeErr	}
 
-	endOffset, deserializeErr := deserializeUint64(snode[NodeEndOffsetIdx:NodeBitmapIdx])
+	endOffset, deserializeErr := deserializeUint16(snode[NodeEndOffsetIdx:NodeBitmapIdx])
 	if deserializeErr != nil { return nil, deserializeErr }
 
 	var bitmaps [8]uint32
@@ -59,7 +59,7 @@ func deserializeINode(snode []byte) (*MariINode, error) {
 
 	currOffset := NodeChildrenIdx
 	for range make([]int, totalChildren) {
-		offset, deserializeErr := deserializeUint64(snode[currOffset:currOffset + OffsetSize])
+		offset, deserializeErr := deserializeUint64(snode[currOffset:currOffset + OffsetSize64])
 		if deserializeErr != nil { return nil, deserializeErr }
 
 		nodePtr := &MariINode{ startOffset: offset }
@@ -88,12 +88,10 @@ func deserializeLNode(snode []byte) (*MariLNode, error) {
 	startOffset, deserializeErr := deserializeUint64(snode[NodeStartOffsetIdx:NodeEndOffsetIdx])
 	if deserializeErr != nil { return nil, deserializeErr	}
 
-	endOffset, deserializeErr := deserializeUint64(snode[NodeEndOffsetIdx:NodeKeyLength])
+	endOffset, deserializeErr := deserializeUint16(snode[NodeEndOffsetIdx:NodeKeyLength])
 	if deserializeErr != nil { return nil, deserializeErr }
 
-	keyLength, deserializeErr := deserializeUint16(snode[NodeKeyLength:NodeKeyIdx])
-	if deserializeErr != nil { return nil, deserializeErr }
-
+	keyLength := uint8(snode[NodeKeyLength])
 	return &MariLNode{
 		version: version,
 		startOffset: startOffset,
@@ -119,7 +117,6 @@ func (mariInst *Mari) serializePathToMemMap(root *MariINode, nextOffsetInMMap ui
 //	the version matches the version of the root. If it is an older version, just serialize the existing offset in the memory map.
 func (mariInst *Mari) serializeRecursive(node *MariINode, level int, offset uint64) ([]byte, error) {
 	var serializeErr error
-
 	node.startOffset = offset
 	
 	sNode, serializeErr := node.serializeINode(true)
@@ -129,7 +126,7 @@ func (mariInst *Mari) serializeRecursive(node *MariINode, level int, offset uint
 	if serializeErr != nil { return nil, serializeErr }
 
 	var childrenOnPaths []byte
-	nextStartOffset := node.leaf.endOffset + 1
+	nextStartOffset := node.leaf.getEndOffsetLNode() + 1
 
 	for _, child := range node.children {
 		if child.version != node.version {
@@ -163,13 +160,13 @@ func (node *MariLNode) serializeLNode() ([]byte, error) {
 
 	sVersion := serializeUint64(node.version)
 	sStartOffset := serializeUint64(node.startOffset)
-	sEndOffset := serializeUint64(node.endOffset)
-	sKeyLength := serializeUint16(node.keyLength)
+	sEndOffset := serializeUint16(node.endOffset)
+	sKeyLength := byte(node.keyLength)
 
 	sLNode = append(sLNode, sVersion...)
 	sLNode = append(sLNode, sStartOffset...)
 	sLNode = append(sLNode, sEndOffset...)
-	sLNode = append(sLNode, sKeyLength...)
+	sLNode = append(sLNode, sKeyLength)
 	
 	sLNode = append(sLNode, node.key...)
 	sLNode = append(sLNode, node.value...)
@@ -183,11 +180,11 @@ func (node *MariINode) serializeINode(serializePath bool) ([]byte, error) {
 	var sINode []byte
 
 	node.endOffset = node.determineEndOffsetINode()
-	node.leaf.startOffset = node.endOffset + 1
+	node.leaf.startOffset = node.getEndOffsetINode() + 1
 	
 	sVersion := serializeUint64(node.version)
 	sStartOffset := serializeUint64(node.startOffset)
-	sEndOffset := serializeUint64(node.endOffset)
+	sEndOffset := serializeUint16(node.endOffset)
 	sLeafOffset := serializeUint64(node.leaf.startOffset)
 	
 	var sBitmap []byte

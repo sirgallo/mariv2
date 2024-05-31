@@ -106,9 +106,9 @@ func (mariInst *Mari) writeMetaToMemMap(sMeta []byte) (ok bool, err error) {
 	}()
 
 	mMap := mariInst.data.Load().(MMap)
-	copy(mMap[MetaVersionIdx:MetaEndSerializedOffset + OffsetSize], sMeta)
+	copy(mMap[MetaVersionIdx:MetaEndSerializedOffset + OffsetSize64], sMeta)
 
-	flushErr := mariInst.flushRegionToDisk(MetaVersionIdx, MetaEndSerializedOffset + OffsetSize)
+	flushErr := mariInst.flushRegionToDisk(MetaVersionIdx, MetaEndSerializedOffset + OffsetSize64)
 	if flushErr != nil { return false, flushErr }
 	return true, nil
 }

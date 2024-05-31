@@ -105,7 +105,7 @@ func (np *MariNodePool) resetINode(node *MariINode) *MariINode{
 
 // resetLNode
 //	When a leaf node is put back in the pool, reset the values.
-func (np *MariNodePool) resetLNode(node *MariLNode) *MariLNode{
+func (np *MariNodePool) resetLNode(node *MariLNode) *MariLNode {
 	node.version = 0
 	node.startOffset = 0
 	node.endOffset = 0

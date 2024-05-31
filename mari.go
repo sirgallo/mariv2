@@ -1,14 +1,13 @@
 package mariv2
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync/atomic"
 )
 
-
 //============================================= Mari
-
 
 // Open initializes Mari
 //	This will create the memory mapped file or read it in if it already exists.
@@ -66,10 +65,10 @@ func Open(opts MariOpts) (*Mari, error) {
 // Close
 //	Close Mari, unmapping the file from memory and closing the file.
 func (mariInst *Mari) Close() error {
+	var closeErr error
 	if ! mariInst.opened { return nil }
 	mariInst.opened = false
 
-	var closeErr error
 	closeErr = mariInst.file.Sync()
 	if closeErr != nil { return closeErr }
 
@@ -122,10 +121,8 @@ func (mariInst *Mari) initializeFile() error {
 		case fSize == 0:
 			_, initErr = mariInst.resizeMmap()
 			if initErr != nil { return initErr }
-
 			endOffset, initErr := mariInst.initRoot()
 			if initErr != nil { return initErr }
-
 			initErr = mariInst.initMeta(endOffset)
 			if initErr != nil { return initErr }
 		default:
