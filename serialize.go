@@ -84,7 +84,7 @@ func deserializeLNode(snode []byte) (*LNode, error) {
 	if deserializeErr != nil { return nil, deserializeErr }
 
 	startOffset, deserializeErr := deserializeUint64(snode[NodeStartOffsetIdx:NodeEndOffsetIdx])
-	if deserializeErr != nil { return nil, deserializeErr	}
+	if deserializeErr != nil { return nil, deserializeErr }
 
 	endOffset, deserializeErr := deserializeUint16(snode[NodeEndOffsetIdx:NodeKeyLength])
 	if deserializeErr != nil { return nil, deserializeErr }
