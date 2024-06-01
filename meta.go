@@ -14,7 +14,7 @@ import (
 //	Initialize and serialize the metadata in a new Mari.
 //	Version starts at 0 and increments, and root offset starts at 24.
 func (mariInst *Mari) initMeta(nextStart uint64) error {
-	newMeta := &MariMetaData{
+	newMeta := &MetaData{
 		version: 0,
 		rootOffset: uint64(InitRootOffset),
 		nextStartOffset: nextStart,

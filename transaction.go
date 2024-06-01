@@ -16,19 +16,15 @@ import (
 //	Creates a new transaction.
 //	The current root is operated on for "Optimistic Concurrency Control".
 //	If isWrite is false, then write operations in the read only transaction will fail.
-func newTx(mariInst *Mari, rootPtr *unsafe.Pointer, isWrite bool) *MariTx {
-	return &MariTx{
-		store: mariInst,
-		root: rootPtr,
-		isWrite: isWrite,
-	}
+func newTx(mariInst *Mari, rootPtr *unsafe.Pointer, isWrite bool) *Tx {
+	return &Tx{ store: mariInst, root: rootPtr, isWrite: isWrite }
 }
 
 // ReadTx
 //	Handles all read related operations.
 //	It gets the latest version of the ordered array mapped trie and starts from that offset in the mem-map.
 //	Get is concurrent since it will perform the operation on an existing path, so new paths can be written at the same time with new versions.
-func (mariInst *Mari) ReadTx(txOps func(tx *MariTx) error) error {
+func (mariInst *Mari) ReadTx(txOps func(tx *Tx) error) error {
 	var readTxErr error
 	for atomic.LoadUint32(&mariInst.isResizing) == 1 { runtime.Gosched() }
 	
@@ -39,7 +35,7 @@ func (mariInst *Mari) ReadTx(txOps func(tx *MariTx) error) error {
 	_, rootOffset, readTxErr = mariInst.loadMetaRootOffset()
 	if readTxErr != nil { return readTxErr }
 
-	var currRoot *MariINode
+	var currRoot *INode
 	currRoot, readTxErr = mariInst.readINodeFromMemMap(rootOffset)
 	if readTxErr != nil { return readTxErr }
 
@@ -57,9 +53,9 @@ func (mariInst *Mari) ReadTx(txOps func(tx *MariTx) error) error {
 //	The operation begins at the latest known version of root, reads from the metadata in the memory map.
 //	The version of the copy is incremented and if the metadata is the same after the path copying has occured, the path is serialized and appended to the memory-map.
 //	The metadata is also being updated to reflect the new version and the new root offset.
-func (mariInst *Mari) UpdateTx(txOps func(tx *MariTx) error) error {
+func (mariInst *Mari) UpdateTx(txOps func(tx *Tx) error) error {
 	var updateTxErr error
-	var currRoot, updatedRootCopy *MariINode
+	var currRoot, updatedRootCopy *INode
 	var rootOffset, version uint64
 	var versionPtr *uint64
 
@@ -108,7 +104,7 @@ func (mariInst *Mari) UpdateTx(txOps func(tx *MariTx) error) error {
 // Put 
 //	Inserts or updates key-value pair into the ordered array mapped trie.
 //	The operation begins at the root of the trie and traverses through the tree until the correct location is found, copying the entire path.
-func (tx *MariTx) Put(key, value []byte) error {
+func (tx *Tx) Put(key, value []byte) error {
 	if ! tx.isWrite { return errors.New("attempting to perform a write in a read only transaction, use tx.UpdateTx") }
 
 	_, putErr := tx.store.putRecursive(tx.root, key, value, 0)
@@ -119,8 +115,8 @@ func (tx *MariTx) Put(key, value []byte) error {
 // Get
 //	Attempts to retrieve the value for a key within the ordered array mapped trie.
 //	The operation begins at the root of the trie and traverses down the path to the key.
-func (tx *MariTx) Get(key []byte, transform *MariOpTransform) (*KeyValuePair, error) {
-	var newTransform MariOpTransform
+func (tx *Tx) Get(key []byte, transform *Transform) (*KeyValuePair, error) {
+	var newTransform Transform
 	if transform != nil {
 		newTransform = *transform
 	} else { newTransform = func(kvPair *KeyValuePair) *KeyValuePair { return kvPair } }
@@ -132,7 +128,7 @@ func (tx *MariTx) Get(key []byte, transform *MariOpTransform) (*KeyValuePair, er
 //	Attempts to delete a key-value pair within the ordered array mapped trie.
 //	It starts at the root of the trie and recurses down the path to the key to be deleted.
 //	The operation creates an entire, in-memory copy of the path down to the key.
-func (tx *MariTx) Delete(key []byte) error {
+func (tx *Tx) Delete(key []byte) error {
 	if ! tx.isWrite { return errors.New("attempting to perform a write in a read only transaction, use tx.UpdateTx") }
 
 	_, delErr := tx.store.deleteRecursive(tx.root, key, 0)
@@ -146,10 +142,9 @@ func (tx *MariTx) Delete(key []byte) error {
 //	A minimum version can be provided which will limit results to the min version forward.
 //	If nil is passed for the minimum version, the earliest version in the structure will be used.
 // 	If nil is passed for the transformer, then the kv pair will be returned as is.
-func (tx *MariTx) Iterate(startKey []byte, totalResults int, opts *MariRangeOpts) ([]*KeyValuePair, error) {
+func (tx *Tx) Iterate(startKey []byte, totalResults int, opts *RangeOpts) ([]*KeyValuePair, error) {
 	var minV uint64 
-	var transform MariOpTransform
-	
+	var transform Transform
 	if opts != nil && opts.MinVersion != nil {
 		minV = *opts.MinVersion
 	} else { minV = 0 }
@@ -170,12 +165,11 @@ func (tx *MariTx) Iterate(startKey []byte, totalResults int, opts *MariRangeOpts
 //	A minimum version can be provided which will limit results to the min version forward.
 //	If nil is passed for the minimum version, the earliest version in the structure will be used.
 // 	If nil is passed for the transformer, then the kv pair will be returned as is.
-func (tx *MariTx) Range(startKey, endKey []byte, opts *MariRangeOpts) ([]*KeyValuePair, error) {
+func (tx *Tx) Range(startKey, endKey []byte, opts *RangeOpts) ([]*KeyValuePair, error) {
 	if bytes.Compare(startKey, endKey) == 1 { return nil, errors.New("start key is larger than end key") }
 
 	var minV uint64 
-	var transform MariOpTransform
-
+	var transform Transform
 	if opts != nil && opts.MinVersion != nil {
 		minV = *opts.MinVersion
 	} else { minV = 0 }

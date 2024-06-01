@@ -182,9 +182,9 @@ func getPosition(bitMap [8]uint32, index byte, level int) int {
 When a position in the new table is calculated for an inserted element, the original table needs to be resized, and a new row at that particular location will be added, maintaining the sorted nature from the sparse index. This is done using go array slices, and copying elements from the original to the new table.
 
 ```go
-func extendTable(orig []*MariINode, bitmap [8]uint32, pos int, newNode *MariINode) []*MariINode {
+func extendTable(orig []*INode, bitmap [8]uint32, pos int, newNode *INode) []*INode {
 	tableSize := populationCount(bitmap)
-	newTable := make([]*MariINode, tableSize)
+	newTable := make([]*INode, tableSize)
 
 	copy(newTable[:pos], orig[:pos])
 	newTable[pos] = newNode
@@ -199,9 +199,9 @@ func extendTable(orig []*MariINode, bitmap [8]uint32, pos int, newNode *MariINod
 Similarly to extending, shrinking a table will remove a row at a particular index and then copy elements from the original table over to the new table.
 
 ```go
-func shrinkTable(orig []*MariINode, bitmap [8]uint32, pos int) []*MariINode {
+func shrinkTable(orig []*INode, bitmap [8]uint32, pos int) []*INode {
 	tableSize := populationCount(bitmap)
-	newTable := make([]*MariINode, tableSize)
+	newTable := make([]*INode, tableSize)
 
 	copy(newTable[:pos], orig[:pos])
 	copy(newTable[pos:], orig[pos + 1:])

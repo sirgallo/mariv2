@@ -18,8 +18,7 @@ func init() {
 
 	var initPCMapErr error
 	
-	opts := mariv2.MariOpts{ Filepath: os.TempDir(), FileName: "testmari" }
-	
+	opts := mariv2.InitOpts{ Filepath: os.TempDir(), FileName: "testmari" }
 	mariInst, initPCMapErr = mariv2.Open(opts)
 	if initPCMapErr != nil { panic(initPCMapErr.Error()) }
 
@@ -34,7 +33,7 @@ func TestMari(t *testing.T) {
 	var val1, val2, val3, val4, val5 *mariv2.KeyValuePair
 
 	t.Run("Test Mari Put", func(t *testing.T) {
-		putErr = mariInst.UpdateTx(func(tx *mariv2.MariTx) error {
+		putErr = mariInst.UpdateTx(func(tx *mariv2.Tx) error {
 			putErr = tx.Put([]byte("hello"), []byte("world"))
 			if putErr != nil { return putErr }
 	
@@ -99,7 +98,7 @@ func TestMari(t *testing.T) {
 	})
 
 	t.Run("Test Mari Get", func(t *testing.T) {
-		getErr := mariInst.ReadTx(func(tx *mariv2.MariTx) error {
+		getErr := mariInst.ReadTx(func(tx *mariv2.Tx) error {
 			expVal1 := "world"
 			val1, getErr = tx.Get([]byte("hello"), nil)
 			if getErr != nil { return getErr }
@@ -149,7 +148,7 @@ func TestMari(t *testing.T) {
 	t.Run("Test Iterate Operation", func(t *testing.T) {
 		var kvPairs []*mariv2.KeyValuePair
 
-		iterErr := mariInst.ReadTx(func(tx *mariv2.MariTx) error {
+		iterErr := mariInst.ReadTx(func(tx *mariv2.Tx) error {
 			var txIterErr error
 			kvPairs, txIterErr = tx.Iterate([]byte("hello"), 3, nil)
 			if txIterErr != nil { return txIterErr }
@@ -179,11 +178,10 @@ func TestMari(t *testing.T) {
 	t.Run("Test Range Operation", func(t *testing.T) {
 		var kvPairs []*mariv2.KeyValuePair
 
-		rangeErr := mariInst.ReadTx(func(tx *mariv2.MariTx) error {
+		rangeErr := mariInst.ReadTx(func(tx *mariv2.Tx) error {
 			var txRangeErr error
 			kvPairs, txRangeErr = tx.Range([]byte("hello"), []byte("yup"), nil)
 			if txRangeErr != nil { return txRangeErr }
-
 			return nil
 		})
 
@@ -214,15 +212,11 @@ func TestMari(t *testing.T) {
 			return kvPair
 		}
 
-		opts := &mariv2.MariRangeOpts{
-			Transform: &transform,
-		}
-
-		iterErr := mariInst.ReadTx(func(tx *mariv2.MariTx) error {
+		opts := &mariv2.RangeOpts{ Transform: &transform }
+		iterErr := mariInst.ReadTx(func(tx *mariv2.Tx) error {
 			var txIterErr error
 			kvPairs, txIterErr = tx.Iterate([]byte("hello"), 3, opts)
 			if txIterErr != nil { return txIterErr }
-
 			return nil
 		})
 
@@ -253,7 +247,7 @@ func TestMari(t *testing.T) {
 	})
 
 	t.Run("Test Mari Delete", func(t *testing.T) {
-		delErr = mariInst.UpdateTx(func(tx *mariv2.MariTx) error {
+		delErr = mariInst.UpdateTx(func(tx *mariv2.Tx) error {
 			delTxErr := tx.Delete([]byte("hello"))
 			if delTxErr != nil { return delTxErr }
 	

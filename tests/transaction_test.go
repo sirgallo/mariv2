@@ -23,8 +23,7 @@ func init() {
 	os.Remove(filepath.Join(os.TempDir(), "testtransaction"))
 	os.Remove(filepath.Join(os.TempDir(), "testtransactiontemp"))
 
-	opts := mariv2.MariOpts{ Filepath: os.TempDir(), FileName: "testtransaction" }
-
+	opts := mariv2.InitOpts{ Filepath: os.TempDir(), FileName: "testtransaction" }
 	txMariInst, txInitMariErr = mariv2.Open(opts)
 	if txInitMariErr != nil {
 		txMariInst.Remove()
@@ -32,7 +31,6 @@ func init() {
 	}
 
 	fmt.Println("transaction test mari initialized")
-
 	txKeyValPairs = make([]KeyVal, INPUT_SIZE)
 
 	for idx := range txKeyValPairs {
@@ -56,7 +54,7 @@ func TestMariTransactionOperations(t *testing.T) {
 			go func () {
 				defer txInsertWG.Done()
 				for _, chunk := range chunks {
-					putErr := txMariInst.UpdateTx(func(tx *mariv2.MariTx) error {
+					putErr := txMariInst.UpdateTx(func(tx *mariv2.Tx) error {
 						for _, kvPair := range chunk {
 							putTxErr := tx.Put(kvPair.Key, kvPair.Value)
 							if putTxErr != nil { return putTxErr }
@@ -84,11 +82,10 @@ func TestMariTransactionOperations(t *testing.T) {
 				defer txRetrieveWG.Done()
 				for _, val := range chunk {
 					var kvPair *mariv2.KeyValuePair
-					getErr := txMariInst.ReadTx(func(tx *mariv2.MariTx) error {
+					getErr := txMariInst.ReadTx(func(tx *mariv2.Tx) error {
 						var getTxErr error
 						kvPair, getTxErr = tx.Get(val.Key, nil)
 						if getTxErr != nil { return getTxErr }
-
 						return nil
 					})
 					
@@ -105,8 +102,7 @@ func TestMariTransactionOperations(t *testing.T) {
 	})
 
 	t.Run("Test Read Operations After Reopen", func(t *testing.T) {
-		opts := mariv2.MariOpts{ Filepath: os.TempDir(), FileName: "testtransaction" }
-		
+		opts := mariv2.InitOpts{ Filepath: os.TempDir(), FileName: "testtransaction" }
 		txMariInst, txInitMariErr = mariv2.Open(opts)
 		if txInitMariErr != nil {
 			txMariInst.Remove()
@@ -121,11 +117,10 @@ func TestMariTransactionOperations(t *testing.T) {
 				defer txRetrieveWG.Done()
 				for _, val := range chunk {
 					var kvPair *mariv2.KeyValuePair
-					getErr := txMariInst.ReadTx(func(tx *mariv2.MariTx) error {
+					getErr := txMariInst.ReadTx(func(tx *mariv2.Tx) error {
 						var getTxErr error
 						kvPair, getTxErr = tx.Get(val.Key, nil)
 						if getTxErr != nil { return getTxErr }
-
 						return nil
 					})
 					
@@ -152,7 +147,7 @@ func TestMariTransactionOperations(t *testing.T) {
 			go func() {
 				defer txRetrieveWG.Done()
 				for _, chunk := range chunks {
-					getErr := txMariInst.ReadTx(func(tx *mariv2.MariTx) error {
+					getErr := txMariInst.ReadTx(func(tx *mariv2.Tx) error {
 						for _, kv := range chunk {
 							kvPair, getTxErr := tx.Get(kv.Key, nil)
 							if getTxErr != nil { return getTxErr }
@@ -187,25 +182,22 @@ func TestMariTransactionOperations(t *testing.T) {
 				defer txIterWG.Done()
 
 				var kvPairs []*mariv2.KeyValuePair
-				iterErr := txMariInst.ReadTx(func(tx *mariv2.MariTx) error {
+				iterErr := txMariInst.ReadTx(func(tx *mariv2.Tx) error {
 					var iterTxErr error
 					kvPairs, iterTxErr = tx.Iterate(start, ITERATE_SIZE, nil)
 					if iterTxErr != nil { return iterTxErr }
-
 					return nil
 				})
 
 				if iterErr != nil { t.Errorf("error on mari get: %s", iterErr.Error()) }
 				
 				atomic.AddUint64(&totalElements, uint64(len(kvPairs)))
-
 				isSorted := IsSorted(kvPairs)
 				if ! isSorted { t.Errorf("key value pairs are not in sorted order: %t", isSorted) }
 			}()
 		}
 
 		txIterWG.Wait()
-
 		t.Log("total elements returned on iterate:", totalElements)
 	})
 
@@ -225,7 +217,7 @@ func TestMariTransactionOperations(t *testing.T) {
 		var kvPairs []*mariv2.KeyValuePair
 		var kvPair *mariv2.KeyValuePair
 
-		mixedErr := txMariInst.UpdateTx(func(tx *mariv2.MariTx) error {
+		mixedErr := txMariInst.UpdateTx(func(tx *mariv2.Tx) error {
 			for _, newKV := range txMixedKvPairs {
 				putTxErr := tx.Put(newKV.Key, newKV.Value)
 				if putTxErr != nil { return putTxErr }
@@ -238,12 +230,10 @@ func TestMariTransactionOperations(t *testing.T) {
 			var iterTxErr error
 			kvPairs, iterTxErr = tx.Iterate(start, 10000, nil)
 			if iterTxErr != nil { return iterTxErr }
-
 			return nil
 		})
 
 		if mixedErr != nil { t.Errorf("error on mari tx mixed: %s", mixedErr.Error()) }
-		
 		isSorted := IsSorted(kvPairs)
 		if ! isSorted { t.Errorf("key value pairs are not in sorted order: %t", isSorted) }
 
@@ -255,7 +245,6 @@ func TestMariTransactionOperations(t *testing.T) {
 	t.Run("Test Delete Operations", func(t *testing.T) {
 		for i := range make([]int, NUM_WRITER_GO_ROUTINES) {
 			kvPairsForWriter := txKeyValPairs[i * WRITE_CHUNK_SIZE:(i + 1) * WRITE_CHUNK_SIZE]
-
 			chunks, chunkErr := Chunk(kvPairsForWriter, TRANSACTION_CHUNK_SIZE)
 			if chunkErr != nil { t.Errorf("error chunking kvPairs sub slice: %s", chunkErr.Error()) }
 
@@ -263,7 +252,7 @@ func TestMariTransactionOperations(t *testing.T) {
 			go func() {
 				defer txDelWG.Done()
 				for _, chunk := range chunks {
-					delErr := txMariInst.UpdateTx(func(tx *mariv2.MariTx) error {
+					delErr := txMariInst.UpdateTx(func(tx *mariv2.Tx) error {
 						for _, kvPair := range chunk {
 							delTxErr := tx.Delete(kvPair.Key)
 							if delTxErr != nil { return delTxErr }
@@ -283,7 +272,6 @@ func TestMariTransactionOperations(t *testing.T) {
 	t.Run("Mari File Size", func(t *testing.T) {
 		fSize, sizeErr := txMariInst.FileSize()
 		if sizeErr != nil { t.Errorf("error getting file size: %s", sizeErr.Error()) }
-
 		t.Log("File Size In Bytes:", fSize)
 	})
 

@@ -33,9 +33,9 @@ func calculateHammingWeight(bitmap uint32) int {
 
 // extendTable
 //	Utility function for dynamically expanding the child node array if a bit is set and a value needs to be inserted into the array.
-func extendTable(orig []*MariINode, bitmap [8]uint32, pos int, newNode *MariINode) []*MariINode {
+func extendTable(orig []*INode, bitmap [8]uint32, pos int, newNode *INode) []*INode {
 	tableSize := populationCount(bitmap)
-	newTable := make([]*MariINode, tableSize)
+	newTable := make([]*INode, tableSize)
 
 	copy(newTable[:pos], orig[:pos])
 	newTable[pos] = newNode
@@ -137,9 +137,9 @@ func setBit(bitmap [8]uint32, index byte) [8]uint32 {
 // shrinkTable
 //	Inverse of the extendTable utility function.
 //	It dynamically shrinks a table by removing an element at a given position.
-func shrinkTable(orig []*MariINode, bitmap [8]uint32, pos int) []*MariINode {
+func shrinkTable(orig []*INode, bitmap [8]uint32, pos int) []*INode {
 	tableSize := populationCount(bitmap)
-	newTable := make([]*MariINode, tableSize)
+	newTable := make([]*INode, tableSize)
 
 	copy(newTable[:pos], orig[:pos])
 	copy(newTable[pos:], orig[pos + 1:])
@@ -149,7 +149,7 @@ func shrinkTable(orig []*MariINode, bitmap [8]uint32, pos int) []*MariINode {
 
 // printChildrenRecursive
 //	Recursively print nodes in the mariInst as we traverse down levels.
-func (mariInst *Mari) printChildrenRecursive(node *MariINode, totalCount, level int) (int, error) {
+func (mariInst *Mari) printChildrenRecursive(node *INode, totalCount, level int) (int, error) {
 	if node == nil { return 0, nil }
 
 	for idx := range node.children {

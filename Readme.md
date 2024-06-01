@@ -45,13 +45,13 @@ func main() {
   homedir, homedirErr := os.UserHomeDir()
   if homedirErr != nil { panic(homedirErr.Error()) }
   
-  opts := mariv2.MariOpts{ Filepath: homedir, FileName: FILENAME }
+  opts := mariv2.InitOpts{ Filepath: homedir, FileName: FILENAME }
 
   mariInst, openErr := mariv2.Open(opts)
   if openErr != nil { panic(openErr.Error()) }
   defer mariInst.Close()
 
-  putErr := mariInst.UpdateTx(func(tx *mariv2.MariTx) error {
+  putErr := mariInst.UpdateTx(func(tx *mariv2.Tx) error {
     putTxErr := tx.Put([]byte("hello"), []byte("world"))
     if putTxErr != nil { return putTxErr }
 
@@ -61,7 +61,7 @@ func main() {
   if putErr != nil { panic(putErr.Error()) }
 
   var kvPair *mariv2.KeyValuePair
-  getErr := mariInst.ReadTx(func(tx *mariv2.MariTx) error {
+  getErr := mariInst.ReadTx(func(tx *mariv2.Tx) error {
     var getTxErr error
     kvPair, getTxErr = tx.Get([]byte("hello"), nil)
     if getTxErr != nil { return getTxErr }
@@ -90,7 +90,7 @@ func main() {
 go test -v ./tests
 ```
 
-Tests are explained further in depth here [Tests](./docs/Tests.md)
+Tests are explained further in depth here [test](./docs/tests.md)
 
 ## godoc
 

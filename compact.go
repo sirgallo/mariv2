@@ -16,7 +16,7 @@ import (
 // newCompaction
 //	Instatiate the compaction strategy on compaction signal.
 //	Creates a new temporary memory mapped file where the version to be snapshotted will be written to.
-func (mariInst *Mari) newCompaction(compactedVersion uint64) (*MariCompaction, error) {
+func (mariInst *Mari) newCompaction(compactedVersion uint64) (*Compaction, error) {
 	var compactErr error
 	tempFileName := mariInst.file.Name() + "temp"
 
@@ -24,7 +24,7 @@ func (mariInst *Mari) newCompaction(compactedVersion uint64) (*MariCompaction, e
 	tempFile, compactErr := os.OpenFile(tempFileName, flag, 0600)
 	if compactErr != nil { return nil, compactErr }
 
-	compact := &MariCompaction{ 
+	compact := &Compaction{ 
 		tempFile: tempFile,
 		compactedVersion: compactedVersion,
 	}
@@ -75,7 +75,7 @@ func (mariInst *Mari) compactHandler() {
 				return compactErr 
 			}
 		
-			newMeta := &MariMetaData{
+			newMeta := &MetaData{
 				version: 0,
 				rootOffset: uint64(InitRootOffset),
 				nextStartOffset: endOff,
@@ -105,7 +105,7 @@ func (mariInst *Mari) compactHandler() {
 //	Recursively builds the new copy of the current version to the new file.
 //	All previous unused paths are discarded.
 //	At each level, the nodes are directly written to the memory map as to avoid loading the entire structure into memory.
-func (mariInst *Mari) serializeCurrentVersionToNewFile(compact *MariCompaction, node *unsafe.Pointer, level int, version, offset uint64) (uint64, error) {
+func (mariInst *Mari) serializeCurrentVersionToNewFile(compact *Compaction, node *unsafe.Pointer, level int, version, offset uint64) (uint64, error) {
 	currNode := loadINodeFromPointer(node)
 	
 	currNode.version = version
@@ -122,7 +122,7 @@ func (mariInst *Mari) serializeCurrentVersionToNewFile(compact *MariCompaction, 
 	nextStartOffset := currNode.leaf.getEndOffsetLNode() + 1
 
 	if len(currNode.children) > 0 {
-		var childNode *MariINode
+		var childNode *INode
 		var childPtr *unsafe.Pointer
 		var updatedOffset uint64
 
@@ -153,7 +153,7 @@ func (mariInst *Mari) serializeCurrentVersionToNewFile(compact *MariCompaction, 
 // swapTempFileWithMari
 //	Close the current mari memory mapped file and swap the new compacted copy.
 //	Rebuild the version index on compaction
-func (mariInst *Mari) swapTempFileWithMari(compact *MariCompaction) error {
+func (mariInst *Mari) swapTempFileWithMari(compact *Compaction) error {
 	currFileName := mariInst.file.Name()
 	tempFileName := compact.tempFile.Name()
 	swapFileName := mariInst.file.Name() + "swap"
@@ -188,7 +188,7 @@ func (mariInst *Mari) swapTempFileWithMari(compact *MariCompaction) error {
 
 // mMapTemp
 //	Mmap helper for the temporary memory mapped file.
-func (compact *MariCompaction) mMapTemp() error {
+func (compact *Compaction) mMapTemp() error {
 	temp, tempErr := Map(compact.tempFile, RDWR, 0)
 	if tempErr != nil { return tempErr }
 
@@ -198,7 +198,7 @@ func (compact *MariCompaction) mMapTemp() error {
 
 // munmapTemp
 //	Unmap helper for the tempory memory mapped file
-func (compact *MariCompaction) munmapTemp() error {
+func (compact *Compaction) munmapTemp() error {
 	temp := compact.tempData.Load().(MMap)
 	unmapErr := temp.Unmap()
 	if unmapErr != nil { return unmapErr }
@@ -210,7 +210,7 @@ func (compact *MariCompaction) munmapTemp() error {
 // resizeTempFile
 //	As the new copy is being built, the file will need to be resized as more elements are appended.
 //	Follow a similar strategy to the resizeFile method for the mari memory map.
-func (compact *MariCompaction) resizeTempFile(offset uint64) error {
+func (compact *Compaction) resizeTempFile(offset uint64) error {
 	temp := compact.tempData.Load().(MMap)
 	if offset > 0 && int(offset) < len(temp) { return nil }
 	
@@ -244,7 +244,7 @@ func (compact *MariCompaction) resizeTempFile(offset uint64) error {
 
 // writeMetaToTempMemMap
 //	Copy the serialized metadata into the memory map.
-func (compact *MariCompaction) writeMetaToTempMemMap(sMeta []byte) (ok bool, err error) {
+func (compact *Compaction) writeMetaToTempMemMap(sMeta []byte) (ok bool, err error) {
 	defer func() {
 		r := recover()
 		if r != nil { 

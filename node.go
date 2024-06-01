@@ -15,13 +15,13 @@ import (
 //	This is used for path copying, so on operations that modify the trie, a copy is created instead of modifying the existing node.
 //	The data structure is essentially immutable. 
 //	If an operation succeeds, the copy replaces the existing node, otherwise the copy is discarded.
-func (mariInst *Mari) copyINode(node *MariINode) *MariINode {
-	nodeCopy := mariInst.nodePool.getINode()
+func (mariInst *Mari) copyINode(node *INode) *INode {
+	nodeCopy := mariInst.pool.getINode()
 	
 	nodeCopy.version = node.version
 	nodeCopy.bitmap = node.bitmap
 	nodeCopy.leaf = node.leaf
-	nodeCopy.children = make([]*MariINode, len(node.children))
+	nodeCopy.children = make([]*INode, len(node.children))
 
 	copy(nodeCopy.children, node.children)
 	return nodeCopy
@@ -30,7 +30,7 @@ func (mariInst *Mari) copyINode(node *MariINode) *MariINode {
 // determineEndOffsetINode
 //	Determine the end offset of a serialized MariINode.
 //	This will be the start offset through the children index, plus (number of children * 8 bytes).
-func (node *MariINode) determineEndOffsetINode() uint16 {
+func (node *INode) determineEndOffsetINode() uint16 {
 	nodeEndOffset := uint16(0)
 	encodedChildrenLength := func() int {
 		var totalChildren int 
@@ -51,7 +51,7 @@ func (node *MariINode) determineEndOffsetINode() uint16 {
 // determineEndOffsetLNode
 //	Determine the end offset of a serialized MariLNode.
 //	This will be the start offset through the key index, plus the length of the key and the length of the value.
-func (node *MariLNode) determineEndOffsetLNode() uint16 {
+func (node *LNode) determineEndOffsetLNode() uint16 {
 	nodeEndOffset := uint16(0)
 	if node.key != nil {
 		nodeEndOffset += uint16(NodeKeyIdx + int(node.keyLength) + len(node.value))
@@ -60,11 +60,11 @@ func (node *MariLNode) determineEndOffsetLNode() uint16 {
 	return nodeEndOffset - 1
 }
 
-func (node *MariINode) getEndOffsetINode() uint64 {
+func (node *INode) getEndOffsetINode() uint64 {
 	return node.startOffset + uint64(node.endOffset)
 }
 
-func (node *MariLNode) getEndOffsetLNode() uint64 {
+func (node *LNode) getEndOffsetLNode() uint64 {
 	return node.startOffset + uint64(node.endOffset)
 }
 
@@ -72,8 +72,8 @@ func (node *MariLNode) getEndOffsetLNode() uint64 {
 //	Get the child node of an internal node.
 //	If the version is the same, set child as that node since it exists in the path.
 //	Otherwise, read the node from the memory map.
-func (mariInst *Mari) getChildNode(childOffset *MariINode, version uint64) (*MariINode, error) {
-	var childNode *MariINode
+func (mariInst *Mari) getChildNode(childOffset *INode, version uint64) (*INode, error) {
+	var childNode *INode
 	var desErr error
 
 	if childOffset.version == version && childOffset.startOffset == 0 {
@@ -95,7 +95,7 @@ func getSerializedNodeSize(data []byte) uint64 {
 // initRoot
 //	Initialize the version 0 root where operations will begin traversing.
 func (mariInst *Mari) initRoot() (uint64, error) {
-	root := mariInst.nodePool.getINode()
+	root := mariInst.pool.getINode()
 	root.startOffset = uint64(InitRootOffset)
 
 	endOffset, writeNodeErr := mariInst.writeINodeToMemMap(root)
@@ -105,14 +105,14 @@ func (mariInst *Mari) initRoot() (uint64, error) {
 
 // loadNodeFromPointer
 //	Load Mari node from an unsafe pointer.
-func loadINodeFromPointer(ptr *unsafe.Pointer) *MariINode {
-	return (*MariINode)(atomic.LoadPointer(ptr))
+func loadINodeFromPointer(ptr *unsafe.Pointer) *INode {
+	return (*INode)(atomic.LoadPointer(ptr))
 }
 
 // newInternalNode
 //	Creates a new internal node in the ordered array mapped trie, which is essentially a branch node that contains pointers to child nodes.
-func (mariInst *Mari) newInternalNode(version uint64) *MariINode {
-	iNode := mariInst.nodePool.getINode()
+func (mariInst *Mari) newInternalNode(version uint64) *INode {
+	iNode := mariInst.pool.getINode()
 	iNode.version = version
 	return iNode
 }
@@ -120,8 +120,8 @@ func (mariInst *Mari) newInternalNode(version uint64) *MariINode {
 // newLeafNode
 //	Creates a new leaf node when path copying Mari, which stores a key value pair.
 //	It will also include the version of Mari.
-func (mariInst *Mari) newLeafNode(key, value []byte, version uint64) *MariLNode {
-	lNode := mariInst.nodePool.getLNode()
+func (mariInst *Mari) newLeafNode(key, value []byte, version uint64) *LNode {
+	lNode := mariInst.pool.getLNode()
 	lNode.version = version
 	lNode.keyLength = uint8(len(key))
 	lNode.key = key
@@ -132,7 +132,7 @@ func (mariInst *Mari) newLeafNode(key, value []byte, version uint64) *MariLNode 
 
 // readINodeFromMemMap
 //	Reads an internal node in Mari from the serialized memory map.
-func (mariInst *Mari) readINodeFromMemMap(startOffset uint64) (node *MariINode, err error) {
+func (mariInst *Mari) readINodeFromMemMap(startOffset uint64) (node *INode, err error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -163,7 +163,7 @@ func (mariInst *Mari) readINodeFromMemMap(startOffset uint64) (node *MariINode, 
 
 // readLNodeFromMemMap
 //	Reads a leaf node in Mari from the serialized memory map.
-func (mariInst *Mari) readLNodeFromMemMap(startOffset uint64) (node *MariLNode, err error) {
+func (mariInst *Mari) readLNodeFromMemMap(startOffset uint64) (node *LNode, err error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -188,14 +188,14 @@ func (mariInst *Mari) readLNodeFromMemMap(startOffset uint64) (node *MariLNode, 
 
 // storeNodeAsPointer
 //	Store a MariINode as an unsafe pointer.
-func storeINodeAsPointer(node *MariINode) *unsafe.Pointer {
+func storeINodeAsPointer(node *INode) *unsafe.Pointer {
 	ptr := unsafe.Pointer(node)
 	return &ptr
 }
 
 // writeINodeToMemMap
 //	Serializes and writes an internal node instance to the memory map.
-func (mariInst *Mari) writeINodeToMemMap(node *MariINode) (offset uint64, err error) {
+func (mariInst *Mari) writeINodeToMemMap(node *INode) (offset uint64, err error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -221,7 +221,7 @@ func (mariInst *Mari) writeINodeToMemMap(node *MariINode) (offset uint64, err er
 
 // writeLNodeToMemMap
 //	Serializes and writes a MariNode instance to the memory map.
-func (mariInst *Mari) writeLNodeToMemMap(node *MariLNode) (offset uint64, err error) {
+func (mariInst *Mari) writeLNodeToMemMap(node *LNode) (offset uint64, err error) {
 	defer func() {
 		r := recover()
 		if r != nil {

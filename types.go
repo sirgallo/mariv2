@@ -12,7 +12,7 @@ import (
 type MMap []byte
 
 // MariOpts initialize the Mari
-type MariOpts struct {
+type InitOpts struct {
 	// Filepath: the path to the memory mapped file
 	Filepath string
 	// FileName: the name of the file for the mari instance
@@ -20,13 +20,13 @@ type MariOpts struct {
 	// NodePoolSize: the total number of pre-allocated nodes to create in the node pool
 	NodePoolSize *int64
 	// CompactionTrigger: the custom compaction trigger function
-	CompactTrigger *MariCompactionTrigger
+	CompactTrigger *CompactionTrigger
 	// AppendOnly: optionally pass true to stop the compaction process from occuring
 	AppendOnly *bool
 }
 
 // MariMetaData contains information related to where the root is located in the mem map and the version.
-type MariMetaData struct {
+type MetaData struct {
 	// Version: a tag for Copy-on-Write indicating the version of Mari
 	version uint64
 	// RootOffset: the offset of the latest version root node in Mari
@@ -36,7 +36,7 @@ type MariMetaData struct {
 }
 
 // MariNode represents a singular node within the hash array mapped trie data structure.
-type MariINode struct {
+type INode struct {
 	// Version: a tag for Copy-on-Write indicating the version of the node
 	version uint64
 	// StartOffset: the offset from the beginning of the serialized node is located
@@ -46,13 +46,13 @@ type MariINode struct {
 	// Bitmap: a 256 bit sparse index that indicates the location of each hashed key within the array of child nodes. Only stored in internal nodes
 	bitmap [8]uint32
 	// LeafOffset: the offset of the leaf node associated with the current byte chunk
-	leaf *MariLNode
+	leaf *LNode
 	// Children: an array of child nodes, which are MariINodes. Location in the array is determined by the sparse index
-	children []*MariINode
+	children []*INode
 }
 
 // MariNode represents a singular node within the hash array mapped trie data structure.
-type MariLNode struct {
+type LNode struct {
 	// Version: a tag for Copy-on-Write indicating the version of the node
 	version uint64
 	// StartOffset: the offset from the beginning of the serialized node is located
@@ -98,27 +98,27 @@ type Mari struct {
 	// ReadResizeLock: A Read-Write mutex for locking reads on resize operations
 	rwResizeLock sync.RWMutex
 	// NodePool: the sync.Pool for recycling nodes so nodes are not constantly allocated/deallocated
-	nodePool *MariNodePool
+	pool *Pool
 	// compactAtVersion: the max version the root can be before being compacted
-	compactTrigger MariCompactionTrigger
+	compactTrigger CompactionTrigger
 	// appendOnly: a flag to determine whether or not to perform the compaction process. By default will be false
 	appendOnly bool
 }
 
 // MariNodePool contains pre-allocated MariINodes/MariLNodes to improve performance so go garbage collection doesn't handle allocating/deallocating nodes on every op
-type MariNodePool struct {
+type Pool struct {
 	// maxSize: the max size for the node pool
 	maxSize int64
 	// size: the current number of allocated nodes in the node pool
 	size int64
 	// iNodePool: the node pool that contains pre-allocated internal nodes
-	iNodePool *sync.Pool
+	iPool *sync.Pool
 	// lNodePool: the node pool that contains pre-allocated leaf nodes
-	lNodePool *sync.Pool
+	lPool *sync.Pool
 }
 
 // MariTx represents a transaction on the store
-type MariTx struct {
+type Tx struct {
 	// store: the mari instance to perform the transaction on
 	store *Mari
 	// root: the root of the trie on which to operate on
@@ -128,10 +128,10 @@ type MariTx struct {
 }
 
 // MariaCompactionStrategy is the function signature for custom compaction trigger
-type MariCompactionTrigger = func(metaData *MariMetaData) bool
+type CompactionTrigger = func(metaData *MetaData) bool
 
 // MariCompaction represents the compaction strategy for removing unused versions
-type MariCompaction struct {
+type Compaction struct {
 	// tempFile: the temporary file for compacting the db
 	tempFile *os.File
 	// tempData: the temporary memory mapped file as byte slice
@@ -141,14 +141,14 @@ type MariCompaction struct {
 }
 
 // MariOpTransform is the function signature for transform functions, which modify results
-type MariOpTransform = func(kvPair *KeyValuePair) *KeyValuePair
+type Transform = func(kvPair *KeyValuePair) *KeyValuePair
 
 // MariRangeOpts contains options for iteration and range functions
-type MariRangeOpts struct {
+type RangeOpts struct {
 	// MinVersion: the min version to return when performing the scan
 	MinVersion *uint64
 	// Transform: the transform function
-	Transform *MariOpTransform
+	Transform *Transform
 }
 
 // DefaultPageSize is the default page size set by the underlying OS. Usually will be 4KiB

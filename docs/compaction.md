@@ -55,11 +55,11 @@ func main() {
   homedir, homedirErr := os.UserHomeDir()
   if homedirErr != nil { panic(homedirErr.Error()) }
   
-  compactTrigger := func(metaData *mariv2.MariMetaData) bool {
+  compactTrigger := func(metaData *mariv2.MetaData) bool {
     return metaData.version >= 1000000
   }
 
-  opts := mariv2.MariOpts{ 
+  opts := mariv2.InitOpts{ 
     Filepath: homedir,
     FileName: FILENAME,
     CompactTrigger: &compactTrigger,
@@ -97,7 +97,7 @@ func main() {
   if homedirErr != nil { panic(homedirErr.Error()) }
 
   appendOnly := true
-  opts := mariv2.MariOpts{ 
+  opts := mariv2.InitOpts{ 
     Filepath: homedir,
     FileName: FILENAME,
     AppendOnly: &appendOnly

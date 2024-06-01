@@ -73,7 +73,6 @@ Transforms are a way to pre-process data before returning results, allowing a us
 All read transactions will return `*mari.KeyValuePair`, which has the following structure:
 ```
 {
-	Version: <uint64>,
 	Key <[]byte>,
 	Value <[]byte>
 }
@@ -112,14 +111,14 @@ func main() {
   homedir, homedirErr := os.UserHomeDir()
   if homedirErr != nil { panic(homedirErr.Error()) }
 
-  opts := mariv2.MariOpts{ Filepath: homedir, FileName: FILENAME }
+  opts := mariv2.InitOpts{ Filepath: homedir, FileName: FILENAME }
 
   mariInst, openErr := mariv2.Open(opts)
   if openErr != nil { panic(openErr.Error()) }
   defer mariInst.Close()
 
   // put a value in mari, using an UpdateTx
-  putErr := mariInst.UpdateTx(func(tx *mariv2.MariTx) error {
+  putErr := mariInst.UpdateTx(func(tx *mariv2.Tx) error {
     putTxErr := tx.Put([]byte("hello"), []byte("world"))
     if putTxErr != nil { return putTxErr }
 
@@ -131,7 +130,7 @@ func main() {
   // get a value in mari, using a ReadTx
   // if transform is nil, kvPair is returned as is
   var kvPair *mariv2.KeyValuePair
-  getErr := mariInst.ReadTx(func(tx *mariv2.MariTx) error {
+  getErr := mariInst.ReadTx(func(tx *mariv2.Tx) error {
     var getTxErr error
     kvPair, getTxErr = tx.Get([]byte("hello"), nil)
     if getTxErr != nil { return getTxErr }
@@ -144,7 +143,7 @@ func main() {
   // get a set of ordered iterated key value pairs from a start key to the total result size, using a ReadTx
   // if opts is nil, version is set to the earliest version and transform will not be used
   var iteratedkvPairs []*mariv2.KeyValuePair
-  iterErr := mariInst.ReadTx(func(tx *mariv2.MariTx) error {
+  iterErr := mariInst.ReadTx(func(tx *mariv2.Tx) error {
     var iterTxErr error
     iteratedkvPairs, iterTxErr = tx.Iterate([]("hello"), 10000, nil)
     if iterTxErr != nil { return iterTxErr }
@@ -157,7 +156,7 @@ func main() {
   // get a range of key-value pairs from a minimum version, using a ReadTx
   // if opts is nil, version is set to the earliest version and transform will not be used
   var rangekvPairs []*mariv2.KeyValuePair
-  rangeErr := mariInst.ReadTx(func(tx *mariv2.MariTx) error {
+  rangeErr := mariInst.ReadTx(func(tx *mariv2.Tx) error {
     var rangeTxErr error
     rangekvPairs, rangeTxErr = tx.Range([]("hello"), []("world"), nil)
     if rangeTxErr != nil { return rangeTxErr }
@@ -175,11 +174,11 @@ func main() {
 
   // opts for range + iteration functions
   // can also contain MinVersion for the minimum version
-  rangeOpts := &mariv2.MariRangeOpts{ Transform: &transform }
+  rangeOpts := &mariv2.RangeOpts{ Transform: &transform }
 
   // get a transformed key-value in mari
   var transformedKvPair *mariv2.KeyValuePair
-  getTransformedErr := mariInst.ReadTx(func(tx *mariv2.MariTx) error {
+  getTransformedErr := mariInst.ReadTx(func(tx *mariv2.Tx) error {
     var getTxErr error
     transformedKvPair, getTxErr = tx.Get([]byte("hello"), transform)
     if getTxErr != nil { return getTxErr }
@@ -191,7 +190,7 @@ func main() {
 
   // get a range of key value pairs with transformed values
   var transformedRangePairs []*mariv2.KeyValuePair
-  transformedRangeErr := mariInst.ReadTx(func(tx *mariv2.MariTx) error {
+  transformedRangeErr := mariInst.ReadTx(func(tx *mariv2.Tx) error {
     var rangeTxErr error
     transformedRangePairs, rangeTxErr = tx.Range([]("hello"), []("world"), rangeOpts)
     if rangeTxErr != nil { return rangeTxErr }
@@ -203,7 +202,7 @@ func main() {
 
   // get a set of ordered iterated key value pairs with transformed values
   var transformedIterPairs []*mariv2.KeyValuePair
-  transformedIterErr := mariInst.ReadTx(func(tx *mariv2.MariTx) error {
+  transformedIterErr := mariInst.ReadTx(func(tx *mariv2.Tx) error {
     var iterTxErr error
     transformedIterPairs, iterTxErr = tx.Iterate([]("hello"), 10000, rangeOpts)
     if iterTxErr != nil { return iterTxErr }
@@ -215,7 +214,7 @@ func main() {
 
   // perform a mixed read-write transaction
   var mixedKvPair *mariv2.KeyValuePair
-  mixedErr := mariInst.UpdateTx(func(tx *mariv2.MariTx) error {
+  mixedErr := mariInst.UpdateTx(func(tx *mariv2.Tx) error {
     putTxErr := tx.Put([]byte("key1"), []byte("value1"))
     if putTxErr != nil { return putTxErr }
 
@@ -232,7 +231,7 @@ func main() {
   if mixedErr != nil { panic(mixedErr.Error()) }
 
   // delete a value in mari
-  delErr := mariInst.UpdateTx(func(tx *mariv2.MariTx) error {
+  delErr := mariInst.UpdateTx(func(tx *mariv2.Tx) error {
     delTxErr := tx.Delete([]byte("hello"))
     if delTxErr != nil { return delTxErr }
 

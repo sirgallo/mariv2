@@ -12,7 +12,7 @@ The test suite consists of a few different tests, as follows:
   5. SingleThread_test - test the single threaded performance for individual operations
   6. MMap_test - test the mmap function behind memory mapping the mari file
 
-Constant values can be modified in `Shared` to check performance characteristics of different ratios of readers/writers, total input sizes, etc.
+Constant values can be modified in `shared` to check performance characteristics of different ratios of readers/writers, total input sizes, etc.
 
 Tests have been run using both `go test` and `go test -race`, to try and catch any race conditions, especially in the concurrent/parallel tests. Use of `-race` will cause tests to run significantly slower since the flag makes the go test tool run a memory profiling tool while the tests execute.
 

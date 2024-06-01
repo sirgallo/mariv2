@@ -23,8 +23,7 @@ func setup() {
 	os.Remove(filepath.Join(os.TempDir(), "testparallel"))
 	os.Remove(filepath.Join(os.TempDir(), "testparalleltemp"))
 
-	opts := mariv2.MariOpts{ Filepath: os.TempDir(), FileName: "testparallel" }
-	
+	opts := mariv2.InitOpts{ Filepath: os.TempDir(), FileName: "testparallel" }
 	parallelMariInst, pInitMariErr = mariv2.Open(opts)
 	if pInitMariErr != nil {
 		parallelMariInst.Remove()
@@ -58,7 +57,7 @@ func setup() {
 		go func () {
 			defer pInitWG.Done()
 			for _, chunk := range chunks {
-				putErr := parallelMariInst.UpdateTx(func(tx *mariv2.MariTx) error {
+				putErr := parallelMariInst.UpdateTx(func(tx *mariv2.Tx) error {
 					for _, kvPair := range chunk {
 						putTxErr := tx.Put(kvPair.Key, kvPair.Value)
 						if putTxErr != nil { return putTxErr }
@@ -73,7 +72,6 @@ func setup() {
 	}
 
 	pInitWG.Wait()
-
 	fmt.Println("finished seeding parallel test mari")
 }
 
@@ -104,7 +102,7 @@ func TestMariParallelReadWrites(t *testing.T) {
 				defer pRetrieveWG.Done()
 				for _, kv := range chunk {
 					var kvPair *mariv2.KeyValuePair
-					getErr := parallelMariInst.ReadTx(func(tx *mariv2.MariTx) error {
+					getErr := parallelMariInst.ReadTx(func(tx *mariv2.Tx) error {
 						var getTxErr error
 						kvPair, getTxErr = tx.Get(kv.Key, nil)
 						if getTxErr != nil { return getTxErr }
@@ -113,7 +111,6 @@ func TestMariParallelReadWrites(t *testing.T) {
 					})
 
 					if getErr != nil { t.Errorf("error on mari get: %s", getErr.Error()) }
-
 					if ! bytes.Equal(kvPair.Value, kv.Value) {
 						t.Errorf("actual value not equal to expected: actual(%s), expected(%s)", kvPair.Value, kv.Value)
 					}
@@ -134,7 +131,7 @@ func TestMariParallelReadWrites(t *testing.T) {
 			go func() {
 				defer pInsertWG.Done()
 				for _, kv := range chunk {
-					putErr := parallelMariInst.UpdateTx(func(tx *mariv2.MariTx) error {
+					putErr := parallelMariInst.UpdateTx(func(tx *mariv2.Tx) error {
 						putTxErr := tx.Put(kv.Key, kv.Value)
 						if putTxErr != nil { return putTxErr }
 
@@ -147,7 +144,6 @@ func TestMariParallelReadWrites(t *testing.T) {
 		}
 
 		pInsertWG.Wait()
-
 		pKeyValPairs = nil
 	})
 }

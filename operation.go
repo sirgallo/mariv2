@@ -27,7 +27,7 @@ func (mariInst *Mari) putRecursive(node *unsafe.Pointer, key, value []byte, leve
 	nodeCopy := mariInst.copyINode(currNode)
 	nodeCopy.leaf.version = nodeCopy.version
 
-	putNewINode := func(node *MariINode, currIdx byte, uKey, uVal []byte) (*MariINode, error) {
+	putNewINode := func(node *INode, currIdx byte, uKey, uVal []byte) (*INode, error) {
 		node.bitmap = setBit(node.bitmap, currIdx)
 		pos := getPosition(node.bitmap, currIdx, level)
 
@@ -149,7 +149,7 @@ func (mariInst *Mari) putRecursive(node *unsafe.Pointer, key, value []byte, leve
 //	If the child node is a leaf node and the key to be searched for is the same as the key of the child node, the value has been found.
 //	Since the trie utilizes path copying, any threads modifying the trie are modifying copies so it the get operation returns the value at the point in time of the get operation.
 //	If the node is node a leaf node, but instead an internal node, recurse down the path to the next level to the child node in the position of the child node array and repeat the above.
-func (mariInst *Mari) getRecursive(node *unsafe.Pointer, key []byte, level int, transform MariOpTransform) (*KeyValuePair, error) {
+func (mariInst *Mari) getRecursive(node *unsafe.Pointer, key []byte, level int, transform Transform) (*KeyValuePair, error) {
 	currNode := loadINodeFromPointer(node)
 	
 	getKeyVal := func() *KeyValuePair {

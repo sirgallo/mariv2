@@ -12,12 +12,12 @@ import (
 
 // compareAndSwap
 //	Performs CAS operation.
-func (mariInst *Mari) compareAndSwap(node *unsafe.Pointer, currNode, nodeCopy *MariINode) bool {
+func (mariInst *Mari) compareAndSwap(node *unsafe.Pointer, currNode, nodeCopy *INode) bool {
 	if atomic.CompareAndSwapPointer(node, unsafe.Pointer(currNode), unsafe.Pointer(nodeCopy)) {
 		return true
 	} else {
-		mariInst.nodePool.iNodePool.Put(nodeCopy.leaf)
-		mariInst.nodePool.lNodePool.Put(nodeCopy)
+		mariInst.pool.iPool.Put(nodeCopy.leaf)
+		mariInst.pool.lPool.Put(nodeCopy)
 		return false
 	}
 }
@@ -145,7 +145,7 @@ func (mariInst *Mari) signalFlush() {
 
 // exclusiveWriteMmap
 //	Takes a path copy and writes the nodes to the memory map, then updates the metadata.
-func (mariInst *Mari) exclusiveWriteMmap(path *MariINode) (bool, error) {
+func (mariInst *Mari) exclusiveWriteMmap(path *INode) (bool, error) {
 	if atomic.LoadUint32(&mariInst.isResizing) == 1 { return false, nil }
 
 	var writeErr error
@@ -164,7 +164,7 @@ func (mariInst *Mari) exclusiveWriteMmap(path *MariINode) (bool, error) {
 	serializedPath, writeErr := mariInst.serializePathToMemMap(path, newOffsetInMMap)
 	if writeErr != nil { return false, writeErr }
 
-	updatedMeta := &MariMetaData{
+	updatedMeta := &MetaData{
 		version: newVersion,
 		rootOffset: newOffsetInMMap,
 		nextStartOffset: newOffsetInMMap + uint64(len(serializedPath)),

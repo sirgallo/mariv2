@@ -12,20 +12,14 @@ import (
 //	Essentially create a cursor that begins at the specified start key.
 //	Recursively builds an accumulator of key value pairs until it reaches the max size.
 func (mariInst *Mari) iterateRecursive(
-	node *unsafe.Pointer, minVersion uint64, 
-	startKey []byte, totalResults, level int, 
-	acc []*KeyValuePair, transform MariOpTransform,
+	node *unsafe.Pointer,
+	minVersion uint64,
+	startKey []byte,
+	totalResults, level int,
+	acc []*KeyValuePair,
+	transform Transform,
 ) ([]*KeyValuePair, error) {
-	genKeyValPair := func(node *MariINode) *KeyValuePair {
-		kvPair := &KeyValuePair {
-			// Version: node.leaf.version,
-			Key: node.leaf.key,
-			Value: node.leaf.value,
-		}
-
-		return kvPair
-	}
-
+	genKeyValPair := func(node *INode) *KeyValuePair { return &KeyValuePair { Key: node.leaf.key, Value: node.leaf.value } }
 	currNode := loadINodeFromPointer(node)
 
 	var startKeyPos int
@@ -57,7 +51,7 @@ func (mariInst *Mari) iterateRecursive(
 
 	if len(currNode.children) > 0 {
 		var iterErr error
-		var childNode *MariINode
+		var childNode *INode
 		var childPtr *unsafe.Pointer
 		
 		currPos := startKeyPos

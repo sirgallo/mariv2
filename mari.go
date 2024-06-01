@@ -1,7 +1,6 @@
 package mariv2
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -13,7 +12,7 @@ import (
 //	This will create the memory mapped file or read it in if it already exists.
 //	Then, the meta data is initialized and written to the first 0-23 bytes in the memory map.
 //	An initial root MariINode will also be written to the memory map as well.
-func Open(opts MariOpts) (*Mari, error) {
+func Open(opts InitOpts) (*Mari, error) {
 	fileWithFilePath := filepath.Join(opts.Filepath, opts.FileName)
 
 	mariInst := &Mari{
@@ -26,8 +25,8 @@ func Open(opts MariOpts) (*Mari, error) {
 
 	if opts.NodePoolSize != nil {
 		nodePoolSize := *opts.NodePoolSize
-		mariInst.nodePool = newMariNodePool(nodePoolSize)
-	} else { mariInst.nodePool = newMariNodePool(DefaultNodePoolSize) }
+		mariInst.pool = newMariNodePool(nodePoolSize)
+	} else { mariInst.pool = newMariNodePool(DefaultNodePoolSize) }
 
 	if opts.AppendOnly != nil {
 		mariInst.appendOnly = *opts.AppendOnly
@@ -36,7 +35,7 @@ func Open(opts MariOpts) (*Mari, error) {
 	if opts.CompactTrigger != nil {	
 		mariInst.compactTrigger = *opts.CompactTrigger
 	} else { 
-		mariInst.compactTrigger = func(metaData *MariMetaData) bool {
+		mariInst.compactTrigger = func(metaData *MetaData) bool {
 			return metaData.version - 1 >= MaxCompactVersion
 		} 
 	}

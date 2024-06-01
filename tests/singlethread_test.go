@@ -21,8 +21,7 @@ func init() {
 	os.Remove(filepath.Join(os.TempDir(), "testst"))
 	os.Remove(filepath.Join(os.TempDir(), "teststtemp"))
 
-	opts := mariv2.MariOpts{ Filepath: os.TempDir(), FileName: "testst" }
-	
+	opts := mariv2.InitOpts{ Filepath: os.TempDir(), FileName: "testst" }
 	singleThreadTestMap, stInitMariErr = mariv2.Open(opts)
 	if stInitMariErr != nil {
 		singleThreadTestMap.Remove()
@@ -30,7 +29,6 @@ func init() {
 	}
 
 	fmt.Println("single thread test mari initialized")
-
 	stkeyValPairs = make([]KeyVal, INPUT_SIZE)
 
 	for idx := range stkeyValPairs {
@@ -45,10 +43,9 @@ func TestMariSingleThreadOperations(t *testing.T) {
 
 	t.Run("Test Write Operations", func(t *testing.T) {
 		for _, val := range stkeyValPairs {
-			putErr := singleThreadTestMap.UpdateTx(func(tx *mariv2.MariTx) error {
+			putErr := singleThreadTestMap.UpdateTx(func(tx *mariv2.Tx) error {
 				putTxErr := tx.Put(val.Key, val.Value)
 				if putTxErr != nil { return putTxErr }
-
 				return nil
 			})
 
@@ -61,11 +58,10 @@ func TestMariSingleThreadOperations(t *testing.T) {
 		
 		for _, val := range stkeyValPairs {
 			var kvPair *mariv2.KeyValuePair
-			getErr := singleThreadTestMap.ReadTx(func(tx *mariv2.MariTx) error {
+			getErr := singleThreadTestMap.ReadTx(func(tx *mariv2.Tx) error {
 				var getTxErr error
 				kvPair, getTxErr = tx.Get(val.Key, nil)
 				if getTxErr != nil { return getTxErr }
-
 				return nil
 			})
 
@@ -78,7 +74,7 @@ func TestMariSingleThreadOperations(t *testing.T) {
 	})
 
 	t.Run("Test Read Operations After Reopen", func(t *testing.T) {
-		opts := mariv2.MariOpts{ Filepath: os.TempDir(), FileName: "testst" }
+		opts := mariv2.InitOpts{ Filepath: os.TempDir(), FileName: "testst" }
 		
 		singleThreadTestMap, stInitMariErr = mariv2.Open(opts)
 		if stInitMariErr != nil {
@@ -88,11 +84,10 @@ func TestMariSingleThreadOperations(t *testing.T) {
 
 		for _, val := range stkeyValPairs {
 			var kvPair *mariv2.KeyValuePair
-			getErr := singleThreadTestMap.ReadTx(func(tx *mariv2.MariTx) error {
+			getErr := singleThreadTestMap.ReadTx(func(tx *mariv2.Tx) error {
 				var getTxErr error
 				kvPair, getTxErr = tx.Get(val.Key, nil)
 				if getTxErr != nil { return getTxErr }
-
 				return nil
 			})
 
@@ -114,7 +109,7 @@ func TestMariSingleThreadOperations(t *testing.T) {
 			start := stkeyValPairs[first].Key
 	
 			var kvPairs []*mariv2.KeyValuePair
-			iterErr := singleThreadTestMap.ReadTx(func(tx *mariv2.MariTx) error {
+			iterErr := singleThreadTestMap.ReadTx(func(tx *mariv2.Tx) error {
 				var iterTxErr error
 				kvPairs, iterTxErr = tx.Iterate(start, ITERATE_SIZE, nil)
 				if iterTxErr != nil { return iterTxErr }
@@ -125,7 +120,6 @@ func TestMariSingleThreadOperations(t *testing.T) {
 			if iterErr != nil { t.Errorf("error on mari get: %s", iterErr.Error()) }
 			
 			atomic.AddUint64(&totalElements, uint64(len(kvPairs)))
-
 			isSorted := IsSorted(kvPairs)
 			if ! isSorted { t.Errorf("key value pairs are not in sorted order: %t", isSorted) }
 		}
@@ -151,18 +145,16 @@ func TestMariSingleThreadOperations(t *testing.T) {
 			}
 
 			var kvPairs []*mariv2.KeyValuePair
-			rangeErr := singleThreadTestMap.ReadTx(func(tx *mariv2.MariTx) error {
+			rangeErr := singleThreadTestMap.ReadTx(func(tx *mariv2.Tx) error {
 				var rangeTxErr error
 				kvPairs, rangeTxErr = tx.Range(start, end, nil)
 				if rangeTxErr != nil { return rangeTxErr }
-
 				return nil
 			})
 
 			if rangeErr != nil { t.Errorf("error on mari get: %s", rangeErr.Error()) }
 			
 			atomic.AddUint64(&totalElements, uint64(len(kvPairs)))
-
 			isSorted := IsSorted(kvPairs)
 			if ! isSorted { t.Errorf("key value pairs are not in sorted order: %t", isSorted) }
 		}
@@ -172,10 +164,9 @@ func TestMariSingleThreadOperations(t *testing.T) {
 
 	t.Run("Test Delete Operations", func(t *testing.T) {
 		for _, val := range stkeyValPairs {
-			delErr := singleThreadTestMap.UpdateTx(func(tx *mariv2.MariTx) error {
+			delErr := singleThreadTestMap.UpdateTx(func(tx *mariv2.Tx) error {
 				delTxErr := tx.Delete(val.Key)
 				if delTxErr != nil { return delTxErr }
-
 				return nil
 			})
 
@@ -186,7 +177,6 @@ func TestMariSingleThreadOperations(t *testing.T) {
 	t.Run("Mari File Size", func(t *testing.T) {
 		fSize, sizeErr := singleThreadTestMap.FileSize()
 		if sizeErr != nil { t.Errorf("error getting file size: %s", sizeErr.Error()) }
-
 		t.Log("File Size In Bytes:", fSize)
 	})
 

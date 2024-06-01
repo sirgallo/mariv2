@@ -31,7 +31,7 @@ func main() {
   if homedirErr != nil { panic(homedirErr.Error()) }
   
   nodePoolSize := int64(1000000)
-  opts := mariv2.MariOpts{ 
+  opts := mariv2.InitOpts{ 
     Filepath: homedir,
     FileName: FILENAME,
     NodePoolSize: &nodePoolSize,
