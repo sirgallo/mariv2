@@ -12,7 +12,7 @@ import (
 // NewMariNodePool
 //	Creates a new node pool for recycling nodes instead of letting garbage collection handle them.
 //	Should help performance when there are a large number of go routines attempting to allocate/deallocate nodes.
-func newMariNodePool(maxSize int64) *Pool {
+func newPool(maxSize int64) *Pool {
 	size := int64(0)
 	np := &Pool{ maxSize: maxSize, size: size }
 
@@ -86,7 +86,7 @@ func (p *Pool) putLNode(node *LNode) {
 
 // resetINode
 //	When an internal node is put back in the pool, reset the values.
-func (np *Pool) resetINode(node *INode) *INode {
+func (p *Pool) resetINode(node *INode) *INode {
 	node.version = 0
 	node.startOffset = 0
 	node.endOffset = 0
@@ -105,7 +105,7 @@ func (np *Pool) resetINode(node *INode) *INode {
 
 // resetLNode
 //	When a leaf node is put back in the pool, reset the values.
-func (np *Pool) resetLNode(node *LNode) *LNode {
+func (p *Pool) resetLNode(node *LNode) *LNode {
 	node.version = 0
 	node.startOffset = 0
 	node.endOffset = 0

@@ -27,8 +27,8 @@ func Open(opts InitOpts) (*Mari, error) {
 
 	if opts.NodePoolSize != nil {
 		nodePoolSize := *opts.NodePoolSize
-		mariInst.pool = newMariNodePool(nodePoolSize)
-	} else { mariInst.pool = newMariNodePool(DefaultNodePoolSize) }
+		mariInst.pool = newPool(nodePoolSize)
+	} else { mariInst.pool = newPool(DefaultNodePoolSize) }
 
 	if opts.AppendOnly != nil {
 		mariInst.appendOnly = *opts.AppendOnly
