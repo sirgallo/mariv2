@@ -225,17 +225,17 @@ const (
 	Node (Leaf):
 		0 Version - 8 bytes
 		8 StartOffset - 8 bytes
-		16 EndOffset - 8 bytes
-		24 KeyLength - 2 bytes, size of the key
-		26 Key - variable length
+		16 EndOffset - 2 bytes
+		18 KeyLength - 1 bytes, size of the key
+		19 Key - variable length
 
 
 	Node (Internal):
 		0 Version - 8 bytes
 		8 StartOffset - 8 bytes
-		16 EndOffset - 8 bytes
-		24 8 Bitmaps - 32 bytes
-		56 LeafOffset - 8 bytes
-		64 Children -->
+		16 EndOffset - 2 bytes
+		18 8 Bitmaps - 32 bytes
+		50 LeafOffset - 8 bytes
+		58 Children -->
 			every child will then be 8 bytes, up to 256 * 8 = 2048 bytes
 */
