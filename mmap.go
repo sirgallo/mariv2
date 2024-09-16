@@ -31,7 +31,7 @@ func (mapped MMap) Unmap() error {
 // mapRegion 
 //	Memory maps a region of a file.
 func mapRegion(file *os.File, length int, prot, flags int, offset int64) (MMap, error) {
-	if offset % int64(os.Getpagesize()) != 0 {
+	if offset % int64(os.Getpagesize()) != 0 { 
 		return nil, errors.New("offset parameter must be a multiple of the system's page size")
 	}
 

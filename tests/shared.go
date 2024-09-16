@@ -13,7 +13,7 @@ import (
 const NUM_WRITER_GO_ROUTINES = 2
 const NUM_READER_GO_ROUTINES = 10
 const NUM_RANGE_GO_ROUTINES = 10
-const INPUT_SIZE = 4000000
+const INPUT_SIZE = 1000000
 const ITERATE_SIZE = 500000
 const TRANSACTION_CHUNK_SIZE = 10000
 const PWRITE_INPUT_SIZE = INPUT_SIZE / 5
@@ -24,7 +24,7 @@ const PCHUNK_SIZE_WRITE = PWRITE_INPUT_SIZE / NUM_WRITER_GO_ROUTINES
 
 
 type KeyVal struct {
-	Key   []byte
+	Key []byte
 	Value []byte
 }
 
